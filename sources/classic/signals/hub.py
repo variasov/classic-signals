@@ -1,23 +1,25 @@
 from functools import partial
-from typing import Type, List, Dict, Deque, Optional
+from typing import Any, Type, List, Dict, Deque, Optional
 import threading
 from collections import defaultdict, deque
+import inspect
 
-import attr
-from classic.components import component
+from dataclasses import field
+from classic.components import component, Registry
 
 from .signal import Signal, Reaction
-from . import _utils
+from . import utils
 
 
 @component
-class Hub:
+class Hub(Registry):
 
-    _reactions: Dict[
-        Type[Signal], List[Reaction]
-    ] = attr.ib(init=False, factory=partial(defaultdict, list))
-
-    _storage: threading.local = attr.ib(init=False, factory=threading.local)
+    _reactions: Dict[Type[Signal], List[Reaction]] = field(
+        init=False, default_factory=partial(defaultdict, list),
+    )
+    _storage: threading.local = field(
+        init=False, default_factory=threading.local,
+    )
 
     @property
     def _buffer(self) -> Deque[Signal]:
@@ -38,21 +40,44 @@ class Hub:
         self._buffer.extend(signals)
 
     def notify(self, *signals: Signal) -> None:
-        for signal in signals:
-            for reaction in self._reactions[signal.__class__]:
-                reaction(signal)
+        with threading.Lock():
+            for signal in signals:
+                for reaction in self._reactions[signal.__class__]:
+                    reaction(signal)
 
-    def add_watcher(
+    def add_reaction(
         self,
         reaction: Reaction,
         signal: Optional[Type[Signal]] = None,
     ):
-        signal = signal or _utils.get_event_type(reaction)
+        signal = signal or utils.get_signal_type(reaction)
         with threading.Lock():
             if reaction not in self._reactions[signal]:
                 self._reactions[signal].append(reaction)
 
-    def remove_watcher(self, reaction: Reaction):
+    def remove_reaction(self, reaction: Reaction):
         with threading.Lock():
             for reactions in self._reactions.values():
                 reactions.remove(reaction)
+
+    @staticmethod
+    def is_reaction(fn: Any) -> bool:
+        return callable(fn) and getattr(fn, '__is_reaction', False)
+
+    @classmethod
+    def get_reactions(cls, obj: Any) -> List[Reaction]:
+        return [
+            member
+            for name, member
+            in inspect.getmembers(obj, predicate=cls.is_reaction)
+        ]
+
+    def register(self, obj: Any) -> None:
+        reactions = self.get_reactions(obj)
+        for reaction in reactions:
+            self.add_reaction(reaction)
+
+    def unregister(self, obj: Any) -> None:
+        reactions = self.get_reactions(obj)
+        for reaction in reactions:
+            self.remove_reaction(reaction)

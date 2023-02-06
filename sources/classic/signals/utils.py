@@ -23,7 +23,7 @@ def get_last_param(signature: inspect.Signature):
     return signature.parameters[name]
 
 
-def get_event_type(handler) -> Type[Signal]:
+def get_signal_type(handler) -> Type[Signal]:
     signature = inspect.signature(handler)
     assert validate_signature_length(signature), \
         f'Reaction for event, must have only 1 parameter!'
