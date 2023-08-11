@@ -1,7 +1,7 @@
 from functools import partial
-from typing import Any, Type, List, Dict, Deque, Optional
+from typing import Any, Type, List, Dict, Optional
 import threading
-from collections import defaultdict, deque
+from collections import defaultdict
 import inspect
 
 from dataclasses import field
@@ -17,30 +17,12 @@ class Hub(Registry):
     _reactions: Dict[Type[Signal], List[Reaction]] = field(
         init=False, default_factory=partial(defaultdict, list),
     )
-    _storage: threading.local = field(
-        init=False, default_factory=threading.local,
+    _lock: threading.Lock = field(
+        init=False, default_factory=threading.RLock,
     )
 
-    @property
-    def _buffer(self) -> Deque[Signal]:
-        if not hasattr(self._storage, 'buffer'):
-            self._storage.buffer = deque()
-        return self._storage.buffer
-
-    def notify_deferred(self) -> None:
-        buffer = self._buffer
-        while buffer:
-            signal = buffer.popleft()
-            self.notify(signal)
-
-    def reset_deferred(self) -> None:
-        self._buffer.clear()
-
-    def defer(self, *signals: Signal):
-        self._buffer.extend(signals)
-
     def notify(self, *signals: Signal) -> None:
-        with threading.Lock():
+        with self._lock.acquire():
             for signal in signals:
                 for reaction in self._reactions[signal.__class__]:
                     reaction(signal)
@@ -51,12 +33,12 @@ class Hub(Registry):
         signal: Optional[Type[Signal]] = None,
     ):
         signal = signal or utils.get_signal_type(reaction)
-        with threading.Lock():
+        with self._lock.acquire():
             if reaction not in self._reactions[signal]:
                 self._reactions[signal].append(reaction)
 
     def remove_reaction(self, reaction: Reaction):
-        with threading.Lock():
+        with self._lock.acquire():
             for reactions in self._reactions.values():
                 reactions.remove(reaction)
 
@@ -65,7 +47,7 @@ class Hub(Registry):
         return callable(fn) and getattr(fn, '__is_reaction', False)
 
     @classmethod
-    def get_reactions(cls, obj: Any) -> List[Reaction]:
+    def filter_reactions(cls, obj: Any) -> List[Reaction]:
         return [
             member
             for name, member
@@ -73,11 +55,11 @@ class Hub(Registry):
         ]
 
     def register(self, obj: Any) -> None:
-        reactions = self.get_reactions(obj)
-        for reaction in reactions:
-            self.add_reaction(reaction)
+        with self._lock.acquire():
+            for reaction in self.filter_reactions(obj):
+                self.add_reaction(reaction)
 
     def unregister(self, obj: Any) -> None:
-        reactions = self.get_reactions(obj)
-        for reaction in reactions:
-            self.remove_reaction(reaction)
+        with self._lock.acquire():
+            for reaction in self.filter_reactions(obj):
+                self.remove_reaction(reaction)

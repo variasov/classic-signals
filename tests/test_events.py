@@ -3,7 +3,7 @@ from typing import Union
 import pytest
 
 from classic.components import component
-from classic.events import Event, Hub, handle_events
+from classic.signals import signal, Hub, reaction
 
 
 class SomeEvent(Event):
