@@ -1,28 +1,23 @@
-from functools import partial
-from typing import Any, Type, List, Dict, Optional
+from typing import Any, Type, Optional
 import threading
 from collections import defaultdict
-import inspect
 
-from dataclasses import field
-from classic.components import component, Registry
+from classic.components import Registry
+from readerwriterlock import rwlock
 
-from .signal import Signal, Reaction
+from .signal import Signal
+from .reaction import Reaction, filter_reactions
 from . import utils
 
 
-@component
 class Hub(Registry):
 
-    _reactions: Dict[Type[Signal], List[Reaction]] = field(
-        init=False, default_factory=partial(defaultdict, list),
-    )
-    _lock: threading.Lock = field(
-        init=False, default_factory=threading.RLock,
-    )
+    def __init__(self):
+        self._reactions = defaultdict(list)
+        self._lock = rwlock.RWLockRead(threading.RLock)
 
-    def notify(self, *signals: Signal) -> None:
-        with self._lock.acquire():
+    def notify(self, *signals) -> None:
+        with self._lock.gen_rlock():
             for signal in signals:
                 for reaction in self._reactions[signal.__class__]:
                     reaction(signal)
@@ -33,33 +28,21 @@ class Hub(Registry):
         signal: Optional[Type[Signal]] = None,
     ):
         signal = signal or utils.get_signal_type(reaction)
-        with self._lock.acquire():
+        with self._lock.gen_wlock():
             if reaction not in self._reactions[signal]:
                 self._reactions[signal].append(reaction)
 
     def remove_reaction(self, reaction: Reaction):
-        with self._lock.acquire():
+        with self._lock.gen_wlock():
             for reactions in self._reactions.values():
                 reactions.remove(reaction)
 
-    @staticmethod
-    def is_reaction(fn: Any) -> bool:
-        return callable(fn) and getattr(fn, '__is_reaction', False)
-
-    @classmethod
-    def filter_reactions(cls, obj: Any) -> List[Reaction]:
-        return [
-            member
-            for name, member
-            in inspect.getmembers(obj, predicate=cls.is_reaction)
-        ]
-
     def register(self, obj: Any) -> None:
-        with self._lock.acquire():
-            for reaction in self.filter_reactions(obj):
+        with self._lock.gen_wlock():
+            for reaction in filter_reactions(obj):
                 self.add_reaction(reaction)
 
     def unregister(self, obj: Any) -> None:
-        with self._lock.acquire():
-            for reaction in self.filter_reactions(obj):
+        with self._lock.gen_wlock():
+            for reaction in filter_reactions(obj):
                 self.remove_reaction(reaction)

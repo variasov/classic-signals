@@ -1,8 +1,8 @@
 import inspect
 from typing import Type, Tuple
 
-from .signal import Signal, Reaction
-
+from .signal import Signal
+from .reaction import Reaction
 
 SignalsToHandlersMap = Tuple[Type[Signal], Reaction]
 
@@ -17,8 +17,11 @@ def validate_signature_length(signature: inspect.Signature) -> bool:
 
 
 def get_last_param(signature: inspect.Signature):
-    # We need to take last key in dict,
-    # but can't do dict.keys()[-1]
+    """
+    We need to take last key in dict,
+    but can't do:
+    >>> dict.keys()[-1]
+    """
     name = next(reversed(signature.parameters.keys()))
     return signature.parameters[name]
 
@@ -29,11 +32,6 @@ def get_signal_type(handler) -> Type[Signal]:
         f'Reaction for event, must have only 1 parameter!'
 
     argument = get_last_param(signature)
+    assert isinstance(argument.annotation, Signal)
 
-    if issubclass(argument.annotation, Signal):
-        return argument.annotation
-    else:
-        raise ValueError(
-            f'Argument of {handler} must be subtype of Event! '
-            f'Argument {argument.name} is {argument.annotation}'
-        )
+    return argument.annotation

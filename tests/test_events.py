@@ -6,21 +6,30 @@ from classic.components import component
 from classic.signals import signal, Hub, reaction
 
 
-class SomeEvent(Event):
+@signal
+class SomeSignal:
     some_field: int
 
 
-class AnotherEvent(Event):
+@signal
+class AnotherSignal:
     some_field: int
 
 
+@component
 class SomeHandlers:
+    hub: Hub
 
-    def assign_1(self, event: SomeEvent):
-        event.some_field = 1
+    def __init__(self):
+        self.hub.register(self)
 
-    def assign_2(self, event: AnotherEvent):
-        event.some_field = 2
+    @reaction
+    def assign_1(self, signal_: SomeSignal):
+        signal_.some_field = 1
+
+    @reaction
+    def assign_2(self, signal_: AnotherSignal):
+        signal_.some_field = 2
 
 
 class AnotherHandlers:
@@ -31,11 +40,10 @@ class AnotherHandlers:
 
 @component
 class SomeService:
-    event: SomeEvent
+    hub: Hub
 
-    @handle_events
     def do(self):
-        self.events.add(self.event)
+        self.hub.notify(SomeSignal())
 
 
 @pytest.fixture

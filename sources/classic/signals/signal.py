@@ -1,18 +1,20 @@
-from typing import Callable, TypeVar, Type
+from typing import Any, TypeVar, Type, Protocol, runtime_checkable
 from dataclasses import dataclass
 
 
-AnyClass = TypeVar('AnyClass')
+@runtime_checkable
+class Signal(Protocol):
+    __is_signal: bool
 
 
-class Signal:
-    pass
+SignalType = TypeVar('SignalType', bound=Type[Signal])
 
 
-Reaction = Callable[[Signal], None]
+def signal(cls: SignalType) -> SignalType:
+    new_cls = dataclass(cls, eq=False)
+    new_cls.__is_signal = True
+    return new_cls
 
 
-def signal(cls: Type[object]) -> Type[Signal]:
-    bases = (Signal,) + cls.__bases__
-    new_cls = type(cls.__name__, bases, dict(cls.__dict__))
-    return dataclass(new_cls)
+def is_signal(obj: Any) -> bool:
+    return isinstance(obj, Signal)
