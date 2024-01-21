@@ -35,7 +35,8 @@ class Hub(Registry):
     def remove_reaction(self, reaction: Reaction):
         with self._lock.gen_wlock():
             for reactions in self._reactions.values():
-                reactions.remove(reaction)
+                if reaction in reactions:
+                    reactions.remove(reaction)
 
     def register(self, obj: Any) -> None:
         with self._lock.gen_wlock():

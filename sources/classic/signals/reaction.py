@@ -15,7 +15,7 @@ ReactionType = TypeVar('ReactionType', bound=Reaction)
 
 
 def is_reaction(obj: Any) -> bool:
-    return isinstance(obj, Reaction)
+    return callable(obj) and getattr(obj, '__is_reaction', False)
 
 
 def filter_reactions(obj: Any) -> List[Reaction]:

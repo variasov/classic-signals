@@ -32,6 +32,6 @@ def get_signal_type(handler) -> Type[Signal]:
         f'Reaction for event, must have only 1 parameter!'
 
     argument = get_last_param(signature)
-    assert isinstance(argument.annotation, Signal)
+    assert hasattr(argument.annotation, '__is_signal')
 
     return argument.annotation
