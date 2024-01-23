@@ -1,12 +1,12 @@
-from typing import Any, Type, Optional
+from typing import Any, Optional
 import threading
 from collections import defaultdict
 
 from classic.components import Registry
 from readerwriterlock import rwlock
 
+from .reaction import filter_reactions, Reaction
 from .signal import Signal
-from .reaction import Reaction, filter_reactions
 from . import utils
 
 
@@ -22,11 +22,7 @@ class Hub(Registry):
                 for reaction in self._reactions[signal.__class__]:
                     reaction(signal)
 
-    def add_reaction(
-        self,
-        reaction: Reaction,
-        signal: Optional[Type[Signal]] = None,
-    ):
+    def add_reaction(self, reaction: Reaction, signal: Optional[Signal] = None):
         signal = signal or utils.get_signal_type(reaction)
         with self._lock.gen_wlock():
             if reaction not in self._reactions[signal]:
@@ -35,8 +31,10 @@ class Hub(Registry):
     def remove_reaction(self, reaction: Reaction):
         with self._lock.gen_wlock():
             for reactions in self._reactions.values():
-                if reaction in reactions:
+                try:
                     reactions.remove(reaction)
+                except ValueError:
+                    pass
 
     def register(self, obj: Any) -> None:
         with self._lock.gen_wlock():

@@ -1,3 +1,17 @@
+def test_add_reaction(some_handlers, some_signal, another_signal, hub_2):
+    hub_2.add_reaction(some_handlers.assign_1, some_signal.__class__)
+
+    assert hub_2._reactions[some_signal.__class__] == [some_handlers.assign_1]
+    assert len(hub_2._reactions) == 1
+
+
+def test_remove_reaction(some_handlers, some_signal, another_signal, hub_2):
+    hub_2.add_reaction(some_handlers.assign_1, some_signal.__class__)
+    hub_2.remove_reaction(some_handlers.assign_1)
+
+    assert hub_2._reactions[some_signal.__class__] == []
+
+
 def test_register(some_handlers, some_signal, another_signal, hub_2):
     hub_2.register(some_handlers)
 

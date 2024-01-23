@@ -1,9 +1,9 @@
 # Classic Signals
 
-This package provides primitives for signal handling.
-Part of project "Classic".
+Данный пакет предоставляет возможность использовать сигналы и реакции в проекте.
+Часть проекта "Classic".
 
-Usage:
+Пример использования:
 
 ```python
 from classic.components import component
