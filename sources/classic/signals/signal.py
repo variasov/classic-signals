@@ -8,7 +8,8 @@ Signal = TypeVar('Signal')
 def signal(cls: Signal) -> Signal:
     """
     Декоратор, помечающий класс как сигнал.
-    :param cls: класс сигнала
+
+    :param cls: Класс, определяемый как сигнал.
     """
     new_cls = dataclass(cls, eq=False, frozen=True)
     new_cls.__is_signal = True
@@ -18,6 +19,7 @@ def signal(cls: Signal) -> Signal:
 def is_signal(obj: Any) -> bool:
     """
     Проверяет, является ли объект сигналом.
-    :param obj: объект для проверки
+
+    :param obj: Объект для проверки.
     """
     return hasattr(obj, '__is_signal')

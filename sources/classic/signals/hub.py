@@ -13,13 +13,12 @@ from . import utils
 
 class Hub(Registry):
     """
-    Хаб это центральная точка коммуникации между реакциями и сигналами.
-    Он хранит реестр всех реакций и соответствующих им сигналов.
+    Хранит знания о сигналах и привязанных к ним реакциям, принимает сигналы и
+    инициирует реакции на сигналы.
     """
 
     _reactions: dict[Signal, list[Reaction]]
     _lock: rwlock.RWLockRead
-
 
     def __init__(self):
         self._reactions = defaultdict(list)
@@ -27,8 +26,9 @@ class Hub(Registry):
 
     def notify(self, *signals: Signal) -> None:
         """
-        Вызывает зарегистрированные реакции для заданных сигналов.
-        :param signals: сигналы, на которые требуется среагировать
+        Вызывает зарегистрированные реакции для указаных сигналов.
+
+        :param signals: Сигналы, на которые требуется среагировать.
         """
         with self._lock.gen_rlock():
             for signal in signals:
@@ -40,28 +40,34 @@ class Hub(Registry):
         signal: Optional[Type[Signal]] = None,
     ) -> None:
         """
-        Добавить реакцию в реестр.
-        :param reaction: функция реакции
+        Добавляет реакцию на сигнал.
+
+        Если сигнал не указан, то реакция будет добавлена в сигнал, указанный
+        в аннотации вызываемого объекта. Если аннотация не указана, вызовет
+        исключение AssertionError.
+
+        Проверка динамическая, построена на assert.
+
+        :param reaction: Вызываемый объект с одним аргументом - сигналом.
+        :param signal: Класс сигнала, на который должна реагировать реакция.
         """
         signal = signal or utils.get_signal_type(reaction)
         with self._lock.gen_wlock():
             if reaction not in self._reactions[signal]:
                 self._reactions[signal].append(reaction)
 
-    @staticmethod
-    def _remove_reaction(reactions: list[Reaction], reaction: Reaction) -> None:
-        try:
-            reactions.remove(reaction)
-        except (KeyError, ValueError):
-            pass
-
     def remove_reaction(
         self, reaction: Reaction,
         signal: Optional[Type[Signal]] = None,
     ) -> None:
         """
-        Удалить реакцию из реестра.
-        :param reaction: функция реакции
+        Добавляет реакцию на сигнал.
+
+        Если сигнал не указан, то Hub переберет реакции для всех сигналов,
+        и уберет указанный отовсюду.
+
+        :param reaction: Вызываемый объект с одним аргументом - сигналом.
+        :param signal: Класс сигнала, на который должна реагировать реакция.
         """
         with self._lock.gen_wlock():
             if signal:
@@ -72,14 +78,18 @@ class Hub(Registry):
             else:
                 for reactions in self._reactions.values():
                     try:
-                        self._remove_reaction(reactions, reaction)
+                        reactions.remove(reaction)
                     except ValueError:
                         pass
 
     def register(self, obj: Any) -> None:
         """
-        Регистрирует все реакции, определенные в объекте.
-        :param obj: объект, содержащий реакции
+        Разбирает указанный объект на реакции, и добавляет их
+        к внутреннему реестру.
+
+        Реакцией считается метод, завернутый в декоратор reaction.
+
+        :param obj: Объект, содержащий реакции.
         """
         with self._lock.gen_wlock():
             for reaction in filter_reactions(obj):
@@ -88,7 +98,10 @@ class Hub(Registry):
     def unregister(self, obj: Any) -> None:
         """
         Удаляет все реакции, определенные в объекте.
-        :param obj: объект, содержащий реакции
+
+        Реакцией считается метод, завернутый в декоратор reaction.
+
+        :param obj: Объект, содержащий реакции.
         """
         with self._lock.gen_wlock():
             for reaction in filter_reactions(obj):

@@ -6,9 +6,11 @@ from .reaction import Reaction
 
 def reaction(fn: Reaction) -> Reaction:
     """
-    Декоратор для маркировки функции как реакции.
-    :param fn: функция реакции
-    :return: та же самая функция реакции
+    Декоратор, помечающий указанную функцию,
+    как реакцию на сигнал, чтобы затем Hub автоматически их регистрировал.
+
+    :param fn: функция
+    :return: та же самая функция
     """
     add_extra_annotation(fn, 'hub', Hub)
     fn.__is_reaction = True
