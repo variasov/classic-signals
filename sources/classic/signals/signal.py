@@ -6,7 +6,7 @@ Signal = TypeVar('Signal')
 
 
 def signal(cls: Signal) -> Signal:
-    new_cls = dataclass(cls, eq=False)
+    new_cls = dataclass(cls, eq=False, frozen=True)
     new_cls.__is_signal = True
     return new_cls
 

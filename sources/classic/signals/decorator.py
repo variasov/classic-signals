@@ -5,6 +5,6 @@ from .reaction import Reaction
 
 
 def reaction(fn: Reaction) -> Reaction:
-    add_extra_annotation(fn, 'signals', Hub)
+    add_extra_annotation(fn, 'hub', Hub)
     fn.__is_reaction = True
     return fn

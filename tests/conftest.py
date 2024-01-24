@@ -14,19 +14,55 @@ class AnotherSignal:
     some_field: int
 
 
-@component
-class SomeHandlers:
+class Handlers:
+    some_field: SomeSignal = None
+    another_field: AnotherSignal = None
 
     @reaction
-    def assign_1(self, signal_: SomeSignal):
-        signal_.some_field = 1
+    def reaction_1(self, signal_: SomeSignal):
+        self.some_field = signal_
 
     @reaction
-    def assign_2(self, signal_: AnotherSignal):
-        signal_.some_field = 2
+    def reaction_2(self, signal_: AnotherSignal):
+        self.another_field = signal_
 
-    def assign_3(self):
+    def reaction_3(self):
         ...
+
+
+class HandlersManual(Handlers):
+
+    def __init__(self, hub: Hub):
+        self.some_field = None
+        self.another_field = None
+        self.hub = hub
+
+    def register(self):
+        self.hub.register(self)
+
+    def unregister(self):
+        self.hub.unregister(self)
+
+    def register_manually(self):
+        self.hub.add_reaction(self.reaction_1, SomeSignal)
+        self.hub.add_reaction(self.reaction_2, AnotherSignal)
+
+    def unregister_manually(self):
+        self.hub.remove_reaction(self.reaction_1, SomeSignal)
+        self.hub.remove_reaction(self.reaction_2, AnotherSignal)
+
+    def register_manually_without_signals(self):
+        self.hub.add_reaction(self.reaction_1)
+        self.hub.add_reaction(self.reaction_2)
+
+    def unregister_manually_without_signals(self):
+        self.hub.remove_reaction(self.reaction_1)
+        self.hub.remove_reaction(self.reaction_2)
+
+
+@component
+class HandlersComponent(Handlers):
+    pass
 
 
 @fixture
@@ -45,15 +81,18 @@ def hub():
 
 
 @fixture
-def hub_2():
-    """
-    2й хаб для тестов, где нужно проверить ручной вызов публичных методов. 
-    Первыйх хаб используется для инита SomeHandlers и автоматически проводит 
-    регистрацию, поэтому не подходит нам.
-    """""
-    return Hub()
+def component_handlers(hub):
+    return HandlersComponent(hub=hub)
 
 
 @fixture
-def some_handlers(hub):
-    return SomeHandlers(signals=hub)
+def manual_handlers(hub):
+    return HandlersManual(hub=hub)
+
+
+@fixture
+def handlers(hub):
+    handlers = HandlersManual(hub=hub)
+    handlers.register()
+    yield handlers
+    handlers.unregister()
