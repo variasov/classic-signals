@@ -10,7 +10,6 @@ def signal(cls: Signal) -> Signal:
     Декоратор, помечающий класс как сигнал.
     :param cls: класс сигнала
     """
-
     new_cls = dataclass(cls, eq=False, frozen=True)
     new_cls.__is_signal = True
     return new_cls

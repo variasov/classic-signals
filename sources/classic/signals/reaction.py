@@ -1,6 +1,7 @@
 from typing import Any, List, Callable, TypeVar
 import inspect
 
+
 Reaction = TypeVar('Reaction', bound=Callable[[Any], Any])
 
 

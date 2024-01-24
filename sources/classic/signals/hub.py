@@ -30,7 +30,6 @@ class Hub(Registry):
         Вызывает зарегистрированные реакции для заданных сигналов.
         :param signals: сигналы, на которые требуется среагировать
         """
-
         with self._lock.gen_rlock():
             for signal in signals:
                 for reaction in self._reactions[signal.__class__]:
@@ -44,7 +43,6 @@ class Hub(Registry):
         Добавить реакцию в реестр.
         :param reaction: функция реакции
         """
-
         signal = signal or utils.get_signal_type(reaction)
         with self._lock.gen_wlock():
             if reaction not in self._reactions[signal]:
@@ -65,7 +63,6 @@ class Hub(Registry):
         Удалить реакцию из реестра.
         :param reaction: функция реакции
         """
-
         with self._lock.gen_wlock():
             if signal:
                 try:
@@ -84,7 +81,6 @@ class Hub(Registry):
         Регистрирует все реакции, определенные в объекте.
         :param obj: объект, содержащий реакции
         """
-
         with self._lock.gen_wlock():
             for reaction in filter_reactions(obj):
                 self.add_reaction(reaction)
@@ -94,7 +90,6 @@ class Hub(Registry):
         Удаляет все реакции, определенные в объекте.
         :param obj: объект, содержащий реакции
         """
-
         with self._lock.gen_wlock():
             for reaction in filter_reactions(obj):
                 self.remove_reaction(reaction)
