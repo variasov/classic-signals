@@ -1,20 +1,25 @@
-from typing import Any, TypeVar, Type, Protocol, runtime_checkable
+from typing import Any, TypeVar
 from dataclasses import dataclass
 
 
-@runtime_checkable
-class Signal(Protocol):
-    __is_signal: bool
+Signal = TypeVar('Signal')
 
 
-SignalType = TypeVar('SignalType', bound=Type[Signal])
+def signal(cls: Signal) -> Signal:
+    """
+    Декоратор, помечающий класс как сигнал.
 
-
-def signal(cls: SignalType) -> SignalType:
-    new_cls = dataclass(cls, eq=False)
+    :param cls: Класс, определяемый как сигнал.
+    """
+    new_cls = dataclass(cls, eq=False, frozen=True)
     new_cls.__is_signal = True
     return new_cls
 
 
 def is_signal(obj: Any) -> bool:
-    return isinstance(obj, Signal)
+    """
+    Проверяет, является ли объект сигналом.
+
+    :param obj: Объект для проверки.
+    """
+    return hasattr(obj, '__is_signal')

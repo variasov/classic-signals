@@ -1,24 +1,25 @@
-from typing import Any, TypeVar, List, Protocol, runtime_checkable
+from typing import Any, List, Callable, TypeVar
 import inspect
 
-from .signal import Signal
 
-
-@runtime_checkable
-class Reaction(Protocol):
-
-    def __call__(self, signal: Signal) -> None:
-        raise NotImplemented
-
-
-ReactionType = TypeVar('ReactionType', bound=Reaction)
+Reaction = TypeVar('Reaction', bound=Callable[[Any], Any])
 
 
 def is_reaction(obj: Any) -> bool:
-    return isinstance(obj, Reaction)
+    """
+    Проверяет, является ли объект реакцией.
+
+    :param obj: объект
+    :returns: bool, True, если указанный объект является реакцией.
+    """
+    return callable(obj) and getattr(obj, '__is_reaction', False)
 
 
 def filter_reactions(obj: Any) -> List[Reaction]:
+    """
+    Возвращает список реакций, определенных в объекте.
+    :param obj: Объект с методами, помеченными декоратором reaction.
+    """
     return [
         member
         for name, member
