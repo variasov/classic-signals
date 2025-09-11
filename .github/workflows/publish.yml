@@ -40,7 +40,7 @@ jobs:
 
     environment:
       name: pypi
-      url: https://pypi.org/project/classic-composites/
+      url: https://pypi.org/project/classic-signals/
 
     permissions:
       id-token: write
