@@ -1,33 +1,29 @@
 [build-system]
 requires = [
-    "setuptools >= 40.6.0",
+    "setuptools >= 67.0.0",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "classic-signals"
-version = "0.1.1"
+version = "1.0.0"
 authors = [
     {name = "Sergey Variasov", email = "variasov@gmail.com"},
 ]
-description = "Simple signals and handlers"
+description = "Simple hub for inverting dependencies"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "readerwriterlock~=1.0.9",
-    "classic-components~=1.3",
 ]
 
 [project.urls]
 Homepage = "https://github.com/variasov/classic-signals"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "build~=1.2.2.post1",
-    "pytest==8.3.4",
-    "pytest-cov==6.0.0",
-    "twine~=4.0",
+    "pytest",
 ]
 
 [tool.setuptools.packages.find]

@@ -1,55 +1,55 @@
 # Classic Signals
 
-Библиотека предоставляет способ инверсии контроля через сигналы и реакции.
+Библиотека предоставляет просую реализацию паттерна Observer для инверсии контроля через сигналы и реакции.
 
-По сути, это паттерн Observer и немного сахара сверху. 
-В одном месте программы мы объявляем сигналы, пользуясь декоратором 
-signal, в других местах приложения пишем реакции на этих сигналов.
-Реакции - это любой вызываемый объект, принимающий один аргумент - инстанс 
-сигнала. Это может быть и просто функция или метод, для удобства завернутый
-в декоратор reaction. Последнее, что нужно, это инстанс класса Hub. В Hub 
-перед началом работы можно зарегистрировать реакции, потом можно вызвать у него
-метод notify, передав в него инстанс сигнала, и Hub вызовет все реакции, 
-относящиеся к сигналу.
+Потокобезопасно.
+
+В одном месте программы мы объявляем сигналы, пользуясь декоратором signal, в других местах приложения пишем реакции на этих сигналов. Реакции - это любой вызываемый объект, принимающий один аргумент - инстанс сигнала. Это может быть и просто функция или метод. Последнее, что нужно, это инстанс класса Hub. В Hub перед началом работы можно зарегистрировать реакции, потом можно вызвать у него метод notify, передав в него инстанс сигнала, и Hub вызовет все реакции, относящиеся к сигналу.
 
 Реакции исполняются последовательно в единственном текущем потоке.
-Не рекомендуется создавать новые потоки из сигналов. Этот механизм
-предназначается для связки разных частей кода с инверсией зависимости, не для 
-распараллеливания задач.
+Не рекомендуется создавать новые потоки из сигналов. Этот механизм предназначается для связки разных частей кода с инверсией зависимости, не для распараллеливания задач.
 
 Пример:
 
 ```python
-from classic.components import component
-from classic.signals import reaction, Hub, signal
+from dataclasses import dataclass
+
+from classic.signals import Hub
 
 
-@signal
+@dataclass
 class SomethingHappened:
-    """Под капотом сигналы - на самом деле датаклассы"""
     some_field: int
 
 
-@signal
+@dataclass
 class SomethingAnotherHappened:
     some_field: int
 
 
-@component
+@dataclass
 class SomeHandlers:
-
-    @reaction
+    hub: Hub
+    
+    def __post_init__(self):
+        self.hub.add_reaction(
+            SomethingHappened,
+            self.on_something_happened,
+        )
+        self.hub.add_reaction(
+            SomethingAnotherHappened,
+            self.on_something_another_happened,
+        )
+    
     def on_something_happened(self, signal: SomethingHappened):
         print(f'Что-то произошло: {signal}')
-
-    @reaction
+    
     def on_something_another_happened(self, signal: SomethingAnotherHappened):
         print(f'Что-то еще произошло: {signal}')
 
 
 hub = Hub()
-SomeHandlers(signals=hub)
-
+SomeHandlers(hub=hub)
 
 signal_1 = SomethingHappened(some_field=0)
 signal_2 = SomethingAnotherHappened(some_field=0)
