@@ -3,6 +3,7 @@
 import threading
 from dataclasses import dataclass
 
+import pytest
 from classic.signals import Hub
 
 
@@ -11,6 +12,18 @@ class SomeSignal:
     """Пример сигнала."""
 
     value: int
+
+
+@dataclass
+class OtherSignal:
+    """Другой сигнал."""
+
+    value: int
+
+
+@dataclass
+class ChildSignal(SomeSignal):
+    """Наследник сигнала для проверки точной диспетчеризации."""
 
 
 @dataclass
@@ -81,3 +94,122 @@ def test_hub_thread_safety():
 
     assert all(not thread.is_alive() for thread in threads)
     assert len(delivered) == iterations * 2
+
+
+def test_add_reaction_ignores_duplicates():
+    """Повторная регистрация той же реакции не дублирует её."""
+    hub = Hub()
+    delivered: list[int] = []
+
+    def reaction(signal: SomeSignal) -> None:
+        delivered.append(signal.value)
+
+    hub.add_reaction(SomeSignal, reaction)
+    hub.add_reaction(SomeSignal, reaction)
+
+    hub.notify(SomeSignal(value=1))
+
+    assert hub._reactions[SomeSignal] == [reaction]
+    assert delivered == [1]
+
+
+def test_remove_reaction():
+    """Удалённая реакция больше не вызывается."""
+    hub = Hub()
+    delivered: list[int] = []
+
+    def reaction(signal: SomeSignal) -> None:
+        delivered.append(signal.value)
+
+    hub.add_reaction(SomeSignal, reaction)
+    hub.remove_reaction(SomeSignal, reaction)
+
+    hub.notify(SomeSignal(value=1))
+
+    assert hub._reactions[SomeSignal] == []
+    assert delivered == []
+
+
+def test_remove_reaction_ignores_missing():
+    """Удаление отсутствующей реакции не приводит к ошибке."""
+    hub = Hub()
+
+    def reaction(signal: SomeSignal) -> None:
+        pass
+
+    def other_reaction(signal: SomeSignal) -> None:
+        pass
+
+    hub.add_reaction(SomeSignal, reaction)
+
+    hub.remove_reaction(SomeSignal, other_reaction)
+    hub.remove_reaction(SomeSignal, reaction)
+    hub.remove_reaction(OtherSignal, reaction)
+
+    assert hub._reactions[SomeSignal] == []
+
+
+def test_notify_multiple_signals_in_order():
+    """Сигналы обрабатываются по очереди, реакции в порядке регистрации."""
+    hub = Hub()
+    calls: list[str] = []
+
+    def first(signal: SomeSignal) -> None:
+        calls.append("first")
+
+    def second(signal: SomeSignal) -> None:
+        calls.append("second")
+
+    def other(signal: OtherSignal) -> None:
+        calls.append("other")
+
+    hub.add_reaction(SomeSignal, first)
+    hub.add_reaction(SomeSignal, second)
+    hub.add_reaction(OtherSignal, other)
+
+    hub.notify(SomeSignal(value=1), OtherSignal(value=2))
+
+    assert calls == ["first", "second", "other"]
+
+
+def test_notify_without_subscribers():
+    """Уведомление сигнала без подписчиков не приводит к ошибке."""
+    hub = Hub()
+
+    hub.notify(SomeSignal(value=1))
+
+
+def test_notify_dispatch_is_exact_class():
+    """Реакция на базовый класс не вызывается для наследников."""
+    hub = Hub()
+    delivered: list[int] = []
+
+    def reaction(signal: SomeSignal) -> None:
+        delivered.append(signal.value)
+
+    hub.add_reaction(SomeSignal, reaction)
+
+    hub.notify(ChildSignal(value=1))
+
+    assert delivered == []
+
+
+def test_exception_in_reaction_propagates():
+    """Исключение реакции обрывает остальные реакции и пробрасывается."""
+    hub = Hub()
+    calls: list[str] = []
+
+    def failing(signal: SomeSignal) -> None:
+        calls.append("failing")
+        raise RuntimeError("реакция упала")
+
+    def next_reaction(signal: SomeSignal) -> None:
+        calls.append("next")
+
+    hub.add_reaction(SomeSignal, failing)
+    hub.add_reaction(SomeSignal, next_reaction)
+
+    with pytest.raises(RuntimeError, match="реакция упала"):
+        hub.notify(SomeSignal(value=1))
+
+    assert calls == ["failing"]
