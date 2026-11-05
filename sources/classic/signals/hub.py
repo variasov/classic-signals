@@ -1,6 +1,5 @@
 """Хаб сигналов: привязка реакций к сигналам и их вызов."""
 
-import threading
 from collections import defaultdict
 from contextlib import suppress
 
@@ -13,6 +12,10 @@ class Hub:
     """Хранит знания о сигналах и привязанных к ним реакциям.
 
     Принимает сигналы и инициирует реакции на сигналы.
+
+    Реакции вызываются внутри notify, пока хаб удерживает блокировку
+    чтения, поэтому вызывать add_reaction или remove_reaction из
+    реакций нельзя: это приведёт к взаимоблокировке.
     """
 
     _reactions: dict[type[Signal], list[Reaction]]
@@ -21,7 +24,7 @@ class Hub:
     def __init__(self) -> None:
         """Создаёт пустой хаб без зарегистрированных реакций."""
         self._reactions = defaultdict(list)
-        self._lock = rwlock.RWLockRead(threading.RLock)
+        self._lock = rwlock.RWLockRead()
 
     def notify(self, *signals: Signal) -> None:
         """Вызывает зарегистрированные реакции для указанных сигналов.
@@ -40,6 +43,8 @@ class Hub:
     ) -> None:
         """Добавляет реакцию на сигнал.
 
+        Нельзя вызывать из реакции: это приведёт к взаимоблокировке.
+
         :param signal: Класс сигнала, на который должна реагировать реакция.
         :param reaction: Вызываемый объект с одним аргументом - сигналом.
         """
@@ -53,6 +58,8 @@ class Hub:
         reaction: Reaction,
     ) -> None:
         """Убирает реакцию на сигнал.
+
+        Нельзя вызывать из реакции: это приведёт к взаимоблокировке.
 
         :param signal: Класс сигнала, на который должна реагировать реакция.
         :param reaction: Вызываемый объект с одним аргументом - сигналом.
