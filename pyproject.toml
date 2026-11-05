@@ -38,6 +38,10 @@ namespaces = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# нужно mutmut'у: тесты импортируют код из sources/ относительно rootdir,
+# поэтому в копии mutants/ импортируется мутированный код, а не установленный
+# пакет (mutmut сам обрабатывает только ./, src/ и source/)
+pythonpath = ["sources"]
 
 [tool.pyright]
 include = ["sources", "tests"]
@@ -98,5 +102,10 @@ ignore_names = [
 ]
 
 [tool.mutmut]
+# ВНИМАНИЕ: mutmut 3.8 умеет подставлять в sys.path только ./, src/ и
+# source/ и снимает только префикс src. из имён мутантов, поэтому с
+# каталогом sources/ прогон требует обхода: во временной копии проекта
+# переименовать sources в src (и where/pythonpath/source_paths в копии)
+# либо дождаться исправления upstream.
 source_paths = ["sources"]
 pytest_add_cli_args = ["-p", "no:cacheprovider"]
