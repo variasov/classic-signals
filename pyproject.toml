@@ -48,15 +48,13 @@ exclude = [
 ]
 typeCheckingMode = "strict"
 reportMissingTypeStubs = "none"
-
-[[tool.pyright.executionEnvironments]]
-root = "."
+venvPath = "."
+venv = ".venv"
 extraPaths = ["sources"]
 
 [[tool.pyright.executionEnvironments]]
 root = "tests"
 reportPrivateUsage = "none"
-extraPaths = ["sources", "."]
 
 [tool.ruff]
 extend-exclude = ["mutants"]
@@ -93,6 +91,10 @@ ignore = [
 paths = ["sources", "tests"]
 exclude = ["mutants"]
 min_confidence = 60
+ignore_names = [
+    # public API used by library users, not inside the package
+    "remove_reaction",
+]
 
 [tool.mutmut]
 source_paths = ["sources"]

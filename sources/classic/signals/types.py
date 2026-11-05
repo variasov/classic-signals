@@ -1,3 +1,5 @@
+"""Типы сигналов и реакций."""
+
 from collections.abc import Callable
 from typing import Any
 
