@@ -23,9 +23,77 @@ Homepage = "https://github.com/variasov/classic-signals"
 
 [dependency-groups]
 dev = [
-    "pytest",
+    "ruff~=0.15.4",
+    "pytest~=9.0.2",
+    "pytest-cov~=7.1",
+    "pyright[nodejs]~=1.1.414",
+    "vulture~=2.16",
+    "mutmut~=3.8; sys_platform != 'win32'",
 ]
 
 [tool.setuptools.packages.find]
 where = ["sources"]
 namespaces = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.pyright]
+include = ["sources", "tests"]
+exclude = [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    ".venv",
+    "mutants",
+]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "."
+extraPaths = ["sources"]
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportPrivateUsage = "none"
+extraPaths = ["sources", "."]
+
+[tool.ruff]
+extend-exclude = ["mutants"]
+target-version = "py310"
+line-length = 80
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",     # keeps D211: no blank line before class docstring
+    "D213",     # keeps D212: multi-line summary on first line
+    "EM",       # error-message style is overly prescriptive
+    "TRY003",   # long exception messages are an API concern
+    "RUF002",   # docstrings are in Russian: Cyrillic letters are intended
+    "RUF003",   # comments are in Russian: Cyrillic letters are intended
+    "CPY001",   # no copyright headers in this project
+    "COM812",   # conflicts with the ruff formatter
+    "ANN401",   # Any is deliberate: Signal is Any by design
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "ANN",      # test annotations are optional
+    "ARG001",   # fixtures requested only for their side effects
+    "ARG002",   # fixtures requested only for their side effects
+    "ARG005",   # lambdas with a fixed callback signature
+    "S101",     # `assert` is idiomatic in pytest
+    "SLF001",   # tests access private members
+    "PLR2004",  # magic values are acceptable in assertions
+    "INP001",   # tests are not a package (no tests/__init__.py)
+]
+
+[tool.vulture]
+paths = ["sources", "tests"]
+exclude = ["mutants"]
+min_confidence = 60
+
+[tool.mutmut]
+source_paths = ["sources"]
+pytest_add_cli_args = ["-p", "no:cacheprovider"]
